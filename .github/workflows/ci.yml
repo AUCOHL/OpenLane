@@ -23,7 +23,7 @@ jobs:
       design_matrix: ${{ steps.set-matrix.outputs.design_matrix }}
       opdks_rev: ${{ steps.set-rev.outputs.opdks_rev }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Python Dependencies
         run: |
           pip3 install poetry poetry-plugin-export
@@ -66,7 +66,7 @@ jobs:
         run: |
           python3 -m pip install git+https://github.com/efabless/IPM
       - name: Checkout submodules
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
   lint:
@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set Up Python
         uses: actions/setup-python@v4
         with:
@@ -94,7 +94,7 @@ jobs:
     name: Build and Unit Test (Python ${{ matrix.python-version }})
     steps:
       - name: Check out repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set Up Python
         uses: actions/setup-python@v4
         with:
@@ -111,13 +111,13 @@ jobs:
     runs-on: ubuntu-22.04
     name: Build (Nix/x86_64-linux)
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Initialize Step Unit Test Submodule
         run: |
           git submodule update --init test/steps/all
       - name: Set up GITHUB_TOKEN
         run: |
-          echo "GITHUB_TOKEN=${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+          echo "GITHUB_TOKEN=${{ secrets.BOT_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
       - uses: DeterminateSystems/nix-installer-action@main
         with:
           extra-conf: |
@@ -132,17 +132,16 @@ jobs:
           run_tests: "true"
   build-linux-aarch64:
     needs: lint
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.04-arm
     name: Build (Nix/aarch64-linux)
     steps:
-      - uses: docker/setup-qemu-action@v1
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Initialize Step Unit Test Submodule
         run: |
           git submodule update --init test/steps/all
       - name: Set up GITHUB_TOKEN
         run: |
-          echo "GITHUB_TOKEN=${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+          echo "GITHUB_TOKEN=${{ secrets.BOT_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
       - uses: DeterminateSystems/nix-installer-action@main
         with:
           extra-conf: |
@@ -168,13 +167,13 @@ jobs:
     runs-on: ${{ matrix.system.gha }}
     name: Build (Nix/${{ matrix.system.nix }})
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Initialize Step Unit Test Submodule
         run: |
           git submodule update --init test/steps/all
       - name: Set up GITHUB_TOKEN
         run: |
-          echo "GITHUB_TOKEN=${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+          echo "GITHUB_TOKEN=${{ secrets.BOT_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
       - uses: DeterminateSystems/nix-installer-action@main
         with:
           extra-conf: |
@@ -215,7 +214,7 @@ jobs:
           remove-docker-images: "true"
           root-reserve-mb: 20480
       - name: Check out repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - uses: docker/setup-qemu-action@v1
       - name: Set Nix System
@@ -290,7 +289,7 @@ jobs:
           remove-codeql: "true"
           remove-docker-images: "true"
           root-reserve-mb: 20480
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Check if Git
@@ -397,7 +396,7 @@ jobs:
     if: ${{ always() }}
     steps:
       - name: Check out repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Setup
@@ -414,13 +413,13 @@ jobs:
         uses: actions/github-script@v6
         if: ${{ github.event_name == 'pull_request' }}
         with:
-          github-token: ${{ secrets.GH_TOKEN }}
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           script: |
             require("./.github/scripts/compare_metrics.js")({
               github: github,
               context: context,
-              botUsername: "openlane-bot",
-              botToken: "${{ secrets.GH_TOKEN }}",
+              botUsername: "${{ vars.BOT_USERNAME }}",
+              botToken: "${{ secrets.BOT_GITHUB_TOKEN }}",
               comparingDirectory: "current",
               againstBranch: "${{ github.base_ref }}",
             }).then(()=>{console.log("Done.");});
@@ -428,7 +427,7 @@ jobs:
         if: ${{ github.event_name == 'push' }} # && env.BRANCH_NAME == 'main' }}
         run: |
           CURRENT_SHA=$(git rev-parse HEAD)
-          REPO=efabless/openlane-metrics
+          REPO=${{ vars.METRICS_REPO }}
           BRANCH_NAME="commit-$CURRENT_SHA"
           echo "Uploading to 'github.com/$REPO@$BRANCH_NAME'…"
           cd current
@@ -437,7 +436,7 @@ jobs:
           git config user.name "${{ vars.BOT_NAME }}"
           git config user.email "${{ vars.BOT_EMAIL }}"
           git commit -m "Upload"
-          git remote add origin "https://${{ vars.BOT_USERNAME }}:${{ secrets.GH_TOKEN }}@github.com/$REPO.git"
+          git remote add origin "https://${{ vars.BOT_USERNAME }}:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/$REPO.git"
           git push -fu origin $BRANCH_NAME # Force for if we have to re-run the CI for some reason
   publish:
     runs-on: ubuntu-22.04
@@ -445,7 +444,7 @@ jobs:
     name: Publish (If Applicable)
     steps:
       - name: Check out repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Setup Environment
@@ -456,7 +455,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GH_TOKEN }}
+          password: ${{ secrets.BOT_GITHUB_TOKEN }}
       - name: Download Image (Docker/amd64)
         uses: actions/download-artifact@v4
         with:
@@ -506,4 +505,4 @@ jobs:
         uses: tvdias/github-tagger@v0.0.1
         with:
           tag: "${{ env.NEW_TAG }}"
-          repo-token: "${{ secrets.GH_TOKEN }}"
+          repo-token: "${{ secrets.BOT_GITHUB_TOKEN }}"

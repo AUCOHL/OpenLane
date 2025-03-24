@@ -164,7 +164,7 @@ if (require.main === module) {
             compareAndComment({
                 github: octokit,
                 context: context,
-                botUsername: "openlane-bot",
+                botUsername: "ohl-bot",
                 botToken: options.token,
                 comparingDirectory: directory,
                 againstBranch: options.branch
