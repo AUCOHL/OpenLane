@@ -202,7 +202,7 @@ jobs:
       - name: Build with Nix
         uses: ./.github/actions/build_nix
         with:
-          nix_system: ${{ matrix.is.nix }}
+          nix_system: ${{ matrix.os.nix }}
           cachix_cache: ${{ vars.CACHIX_CACHE || 'openlane' }}
           cachix_token: "${{ secrets.CACHIX_TOKEN }}"
           shell: "zsh {0}"
