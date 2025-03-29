@@ -157,15 +157,27 @@ jobs:
   build-darwin:
     strategy:
       matrix:
-        system:
+        os:
           [
-            { gha: macos-13, nix: "x86_64-darwin" },
-            { gha: macos-14, nix: "aarch64-darwin" },
+            {
+              name: "macOS 13",
+              family: "darwin",
+              runner: "macos-13",
+              arch: "x86_64",
+              nix: "x86_64-darwin",
+            },
+            {
+              name: "macOS 14",
+              family: "darwin",
+              runner: "macos-15",
+              arch: "aarch64",
+              nix: "aarch64-darwin",
+            },
           ]
       fail-fast: false
     needs: [lint, prepare-test-matrices]
-    runs-on: ${{ matrix.system.gha }}
-    name: Build (Nix/${{ matrix.system.nix }})
+    runs-on: ${{ matrix.os.runner }}
+    name: Build (Nix/${{ matrix.os.nix }})
     steps:
       - uses: actions/checkout@v4
       - name: Initialize Step Unit Test Submodule
@@ -190,14 +202,13 @@ jobs:
       - name: Build with Nix
         uses: ./.github/actions/build_nix
         with:
-          nix_system: ${{ matrix.system.nix }}
+          nix_system: ${{ matrix.is.nix }}
           cachix_cache: ${{ vars.CACHIX_CACHE || 'openlane' }}
           cachix_token: "${{ secrets.CACHIX_TOKEN }}"
           shell: "zsh {0}"
           run_tests: "true"
           pdk_root: ${{ github.workspace }}/.volare-sky130
   build-docker:
-    runs-on: ubuntu-22.04
     strategy:
       matrix:
         os:
@@ -207,16 +218,19 @@ jobs:
               family: "linux",
               runner: "ubuntu-22.04",
               arch: "x86_64",
+              nix: "x86_64-linux",
             },
             {
               name: "Ubuntu 22.04",
               family: "linux",
               runner: "ubuntu-22.04-arm",
               arch: "aarch64",
+              nix: "aarch64-linux",
             },
           ]
+    runs-on: ${{ matrix.os.runner }}
     needs: [build-linux-amd64, build-linux-aarch64]
-    name: Build Docker Image (${{ matrix.os.archs }})
+    name: Build Docker Image (${{ matrix.os.arch }})
     steps:
       - name: Maximize build space
         uses: easimon/maximize-build-space@master
@@ -229,13 +243,6 @@ jobs:
           root-reserve-mb: 20480
       - name: Check out repo
         uses: actions/checkout@v4
-      - name: Set Nix System
-        run: |
-          nix_system=x86_64-linux
-          if [ "${{ matrix.os.arch }}" == "aarch64" ]; then
-            nix_system=aarch64-linux
-          fi
-          echo "NIX_SYSTEM=$nix_system" >> $GITHUB_ENV
       - uses: DeterminateSystems/nix-installer-action@main
         with:
           extra-conf: |
@@ -244,7 +251,7 @@ jobs:
       - name: Build with Nix
         uses: ./.github/actions/build_nix
         with:
-          nix_system: ${{ env.NIX_SYSTEM }}
+          nix_system: ${{ matrix.os.nix }}
           cachix_cache: ${{ vars.CACHIX_CACHE || 'openlane' }}
 
       - name: Build Docker Image
