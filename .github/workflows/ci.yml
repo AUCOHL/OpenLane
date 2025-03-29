@@ -200,9 +200,23 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        arch: ["amd64", "aarch64"]
+        os:
+          [
+            {
+              name: "Ubuntu 22.04",
+              family: "linux",
+              runner: "ubuntu-22.04",
+              arch: "x86_64",
+            },
+            {
+              name: "Ubuntu 22.04",
+              family: "linux",
+              runner: "ubuntu-22.04-arm",
+              arch: "aarch64",
+            },
+          ]
     needs: [build-linux-amd64, build-linux-aarch64]
-    name: Build Docker Image (${{ matrix.arch }})
+    name: Build Docker Image (${{ matrix.os.archs }})
     steps:
       - name: Maximize build space
         uses: easimon/maximize-build-space@master
@@ -215,12 +229,10 @@ jobs:
           root-reserve-mb: 20480
       - name: Check out repo
         uses: actions/checkout@v4
-
-      - uses: docker/setup-qemu-action@v1
       - name: Set Nix System
         run: |
           nix_system=x86_64-linux
-          if [ "${{ matrix.arch }}" == "aarch64" ]; then
+          if [ "${{ matrix.os.arch }}" == "aarch64" ]; then
             nix_system=aarch64-linux
           fi
           echo "NIX_SYSTEM=$nix_system" >> $GITHUB_ENV
