@@ -102,7 +102,14 @@ in
       sed -i 's@#include "base/main/abcapis.h"@#include <base/main/abcapis.h>@' src/rmp/src/Restructure.cpp
       sed -i 's@# tclReadline@target_link_libraries(openroad readline ${cudd}/lib/libcudd.a)@' src/CMakeLists.txt
     '';
-
+    
+    qt5Libs = [
+      libsForQt5.qt5.qtbase
+      libsForQt5.qt5.qtcharts
+      libsForQt5.qt5.qtsvg
+      libsForQt5.qt5.qtdeclarative
+    ];
+    
     buildInputs = [
       openroad-abc
       boost186
@@ -114,8 +121,6 @@ in
       tclreadline
       spdlog
       libffi
-      libsForQt5.qtbase
-      libsForQt5.qt5.qtcharts
       llvmPackages.openmp
       llvmPackages.libunwind
 
@@ -128,7 +133,7 @@ in
       gtest
 
       or-tools_9_11
-    ];
+    ] ++ finalAttrs.qt5Libs;
 
     nativeBuildInputs = [
       swig4
@@ -150,6 +155,7 @@ in
       }
       alias ord-cmake-debug="cmake -DCMAKE_BUILD_TYPE=Debug $cmakeFlagsDevDebug -G Ninja"
       alias ord-cmake-release="cmake -DCMAKE_BUILD_TYPE=Release $cmakeFlagsDevRelease -G Ninja"
+      export QT_PLUGIN_PATH="${lib.makeSearchPathOutput "bin" "lib/qt-${libsForQt5.qt5.qtbase.version}/plugins" finalAttrs.qt5Libs}";
     '';
 
     passthru = {
