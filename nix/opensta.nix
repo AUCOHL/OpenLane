@@ -18,7 +18,7 @@
   swig,
   pkg-config,
   cmake,
-  gnumake,
+  ninja,
   flex,
   bison,
   tcl,
@@ -74,9 +74,9 @@ clangStdenv.mkDerivation (finalAttrs: {
     swig
     pkg-config
     cmake
-    gnumake
     flex
     bison
+    ninja
   ];
 
   meta = with lib; {
